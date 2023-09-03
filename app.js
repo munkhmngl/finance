@@ -6,7 +6,11 @@ var uiController = (function() {
         inputValue: '.add__value',
         addBtn: '.add__btn',
         incomeList: '.income__list',
-        expenseList: '.expenses__list'
+        expenseList: '.expenses__list',
+        tusuvLabel: '.budget__value',
+        incomeLabel: '.budget__income--value',
+        expenseLabel: '.budget__expenses--value',
+        percentageLabel: '.budget__expenses--percentage'
     }
 
     return {
@@ -34,6 +38,13 @@ var uiController = (function() {
             });
             fieldsArr[0].focus();
         },
+        dataLooked: function(data){
+            document.querySelector(DOMstrings.tusuvLabel).textContent = data.tusuv;
+            document.querySelector(DOMstrings.incomeLabel).textContent = data.totalInc;
+            document.querySelector(DOMstrings.expenseLabel).textContent = data.totalExp;
+            if(data.huvi !== 0) document.querySelector(DOMstrings.percentageLabel).textContent = data.huvi + '%';
+            else document.querySelector(DOMstrings.percentageLabel).textContent = data.huvi;
+        },
         addListItem: function(item, type){
             // Орлого зарлагыи элементийг агуулсан html-ийг бэлтгэнэ
             let html, list;
@@ -42,12 +53,14 @@ var uiController = (function() {
                 html = '<div class="item clearfix" id="income-%id%"><div class="item__description">$$DESXRIPTIN$$</div><div class="right clearfix"><div class="item__value">+ $$VALUE$$</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
             } else {
                 list = DOMstrings.expenseList;
-                html ='<div class="item clearfix" id="expense-%id%"><div class="item__description">$$DESXRIPTIN$$</div><div class="right clearfix"><div class="item__value">- $$VALUE$$</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
+                html ='<div class="item clearfix" id="expense-%id%"><div class="item__description">$$DESXRIPTIN$$</div><div class="right clearfix"><div class="item__value">- $$VALUE$$</div><div class="item__percentage">%huvi%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
             }
             // Тэр HTML дотроо орлого зарлагын утгуудыг REPLACE ашиглаж өөрчилж өгнө
             html = html.replace('%id%', item.id);
             html = html.replace('$$DESXRIPTIN$$', item.description);
             html = html.replace('$$VALUE$$', item.value);
+            let data = financeController.tusuvEnd();
+            html = html.replace('%huvi%', data.huvi + '%');
             // Бэлтгэсэн HTML ээ DOM руу хийж өгнө
             document.querySelector(list).insertAdjacentHTML('beforeend', html);
         }
@@ -99,6 +112,15 @@ var financeController = (function() {
                 totalExp: data.totals.exp
             }
         },
+        deleteItem: function(type, id){
+            let ids = data.items[type].map(function(el){
+                return el.id;
+            });
+            let index = ids.indexOf(id);
+            if(index !== -1){
+                data.items[type].splice(index, 1);
+            }
+        },
         addItem: function(type, desc, val){
             let item, id;
             data.items[type].length === 0 ? id = 1 : id = data.items[type][data.items[type].length - 1].id + 1;
@@ -127,7 +149,7 @@ var appController = (function(uiController, financeController) {
             // Эцсийн үлдэгдэл
             let oldData = financeController.tusuvEnd();
             //тооцоог дэлгэцэнд гаргана
-            console.log(oldData);
+            uiController.dataLooked(oldData);
         }
     };
 
@@ -146,6 +168,12 @@ var appController = (function(uiController, financeController) {
     return {
         init: function() {
             console.log('Программ эхлэх...');
+            uiController.dataLooked({
+                tusuv: 0,
+                huvi: 0,
+                totalInc: 0,
+                totalExp: 0
+            });
             setupEventListeners();
         }
     }

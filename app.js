@@ -17,6 +17,23 @@ var uiController = (function() {
         },
         getDOMstrings: function(){
             return DOMstrings;
+        },
+        addListItem: function(item, type){
+            // Орлого зарлагыи элементийг агуулсан html-ийг бэлтгэнэ
+            let html, list;
+            if(type === 'inc'){
+                list = '.income__list';
+                html = '<div class="item clearfix" id="income-%id%"><div class="item__description">$$DESXRIPTIN$$</div><div class="right clearfix"><div class="item__value">+ $$VALUE$$</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
+            } else {
+                list = '.expenses__list';
+                html ='<div class="item clearfix" id="expense-%id%"><div class="item__description">$$DESXRIPTIN$$</div><div class="right clearfix"><div class="item__value">- $$VALUE$$</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
+            }
+            // Тэр HTML дотроо орлого зарлагын утгуудыг REPLACE ашиглаж өөрчилж өгнө
+            html = html.replace('%id%', item.id);
+            html = html.replace('$$DESXRIPTIN$$', item.description);
+            html = html.replace('$$VALUE$$', item.value);
+            // Бэлтгэсэн HTML ээ DOM руу хийж өгнө
+            document.querySelector(list).insertAdjacentHTML('beforeend', html);
         }
     };
 })();
@@ -48,6 +65,7 @@ var financeController = (function() {
             data.items[type].length === 0 ? id = 1 : id = data.items[type][data.items[type].length - 1].id + 1;
             type === 'inc' ? item = new Income(id, desc, val) : item = new Expense(id, desc, val);
             data.items[type].push(item);
+            return item;
         },
         seeData: function(){
             return data;
@@ -60,8 +78,9 @@ var appController = (function(uiController, financeController) {
         // Оруулах өгөгдлийг дэлгэцнээё олж авна
         let input = uiController.getInput();
         // Олж авсан өгөгдлүүдээ санхүүгийн контроллерт дамжуулна
-        financeController.addItem(input.type, input.description, input.value);
+        let item = financeController.addItem(input.type, input.description, input.value);
         // Олж авсан өгөгдлүүдээ тохирох хэсэгт нь гаргана
+        uiController.addListItem(item, input.type);
         // Төсвийг тооцоолно
         // Эцсийн үлдэгдэл, тооцоог дэлгэцэнд гаргана
     };

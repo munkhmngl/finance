@@ -33,7 +33,7 @@ var financeController = (function() {
         this.value = value;
     }
     let data = {
-        allItems: {
+        items: {
             inc: [],
             exp: []
         },
@@ -42,14 +42,25 @@ var financeController = (function() {
             exp: 0
         }
     };
-    
+    return {
+        addItem: function(type, desc, val){
+            let item, id;
+            data.items[type].length === 0 ? id = 1 : id = data.items[type][data.items[type].length - 1].id + 1;
+            type === 'inc' ? item = new Income(id, desc, val) : item = new Expense(id, desc, val);
+            data.items[type].push(item);
+        },
+        seeData: function(){
+            return data;
+        }
+    }
 })();
 // Програмын холбогч контроллер
 var appController = (function(uiController, financeController) {
     let ctrlAddItem = function() {
         // Оруулах өгөгдлийг дэлгэцнээё олж авна
-        console.log(uiController.getInput());
+        let input = uiController.getInput();
         // Олж авсан өгөгдлүүдээ санхүүгийн контроллерт дамжуулна
+        financeController.addItem(input.type, input.description, input.value);
         // Олж авсан өгөгдлүүдээ тохирох хэсэгт нь гаргана
         // Төсвийг тооцоолно
         // Эцсийн үлдэгдэл, тооцоог дэлгэцэнд гаргана
@@ -60,7 +71,6 @@ var appController = (function(uiController, financeController) {
         document.querySelector(DOM.addBtn).addEventListener('click', function(){
             ctrlAddItem();
         });
-    
         document.addEventListener('keypress', function(e){
             if(e.key === 13 || e.which === 13){
                 ctrlAddItem();

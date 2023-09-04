@@ -10,7 +10,8 @@ var uiController = (function() {
         tusuvLabel: '.budget__value',
         incomeLabel: '.budget__income--value',
         expenseLabel: '.budget__expenses--value',
-        percentageLabel: '.budget__expenses--percentage'
+        percentageLabel: '.budget__expenses--percentage',
+        containerDiv: '.container'
     }
 
     return {
@@ -23,7 +24,7 @@ var uiController = (function() {
             return {
                 type: document.querySelector(DOMstrings.inputType).value,
                 description: document.querySelector(DOMstrings.inputDescription).value,
-                value: parseInt(document.querySelector(DOMstrings.inputValue).value)
+                value: document.querySelector(DOMstrings.inputValue).value
             };
         },
         getDOMstrings: function(){
@@ -45,22 +46,26 @@ var uiController = (function() {
             if(data.huvi !== 0) document.querySelector(DOMstrings.percentageLabel).textContent = data.huvi + '%';
             else document.querySelector(DOMstrings.percentageLabel).textContent = data.huvi;
         },
+        deleteListItem: function(id){
+            let el = document.getElementById(id);
+            el.parentNode.removeChild(el);
+        },
         addListItem: function(item, type){
             // Орлого зарлагыи элементийг агуулсан html-ийг бэлтгэнэ
             let html, list;
             if(type === 'inc'){
                 list = DOMstrings.incomeList;
-                html = '<div class="item clearfix" id="income-%id%"><div class="item__description">$$DESXRIPTIN$$</div><div class="right clearfix"><div class="item__value">+ $$VALUE$$</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
+                html = '<div class="item clearfix" id="inc-%id%"><div class="item__description">$$DESXRIPTIN$$</div><div class="right clearfix"><div class="item__value">+ $$VALUE$$</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
             } else {
                 list = DOMstrings.expenseList;
-                html ='<div class="item clearfix" id="expense-%id%"><div class="item__description">$$DESXRIPTIN$$</div><div class="right clearfix"><div class="item__value">- $$VALUE$$</div><div class="item__percentage">%huvi%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
+                html ='<div class="item clearfix" id="exp-%id%"><div class="item__description">$$DESXRIPTIN$$</div><div class="right clearfix"><div class="item__value">- $$VALUE$$</div><div class="item__percentage">%huvi%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
             }
             // Тэр HTML дотроо орлого зарлагын утгуудыг REPLACE ашиглаж өөрчилж өгнө
             html = html.replace('%id%', item.id);
             html = html.replace('$$DESXRIPTIN$$', item.description);
             html = html.replace('$$VALUE$$', item.value);
-            let data = financeController.tusuvEnd();
-            html = html.replace('%huvi%', data.huvi + '%');
+            let data = financeController.tusuvTuluv();
+            html = html.replace('%huvi%', data + '%');
             // Бэлтгэсэн HTML ээ DOM руу хийж өгнө
             document.querySelector(list).insertAdjacentHTML('beforeend', html);
         }
@@ -77,6 +82,14 @@ var financeController = (function() {
         this.id = id;
         this.description = description;
         this.value = value;
+    };
+    Expense.prototype.calcPercentage = function(totalIncome){
+        if(totalIncome > 0)
+        this.percentage = Math.round((this.value / totalIncome) * 100);
+        else this.percentage = 0;
+    };
+    Expense.prototype.getPercentage = function(){
+        return this.percentage;
     };
     let calculateTotal = function(type){
         let sum = 0;
@@ -102,7 +115,22 @@ var financeController = (function() {
             calculateTotal('inc');
             calculateTotal('exp');
             data.tusuv = data.totals.inc - data.totals.exp;
-            data.huvi = Math.round((data.totals.exp / data.totals.inc) * 100);
+            if(data.tusuv.inc > 0)
+                data.huvi = Math.round((data.totals.exp / data.totals.inc) * 100);
+            else data.huvi = 0;
+            let zardalHuvi = Math.round((data.totals.exp / data.tusuv) * 100);
+            return zardalHuvi;
+        },
+        calculatePercentage: function(){
+            data.items.exp.forEach( function(el){
+                el.calcPercentage(data.totals.inc);
+            });
+        },
+        getPercentage: function() {
+            let allPercentage = data.items.exp.map(function(el){
+                return el.getPercentage();
+            });
+            return allPercentage;
         },
         tusuvEnd: function(){
             return {
@@ -127,32 +155,38 @@ var financeController = (function() {
             type === 'inc' ? item = new Income(id, desc, val) : item = new Expense(id, desc, val);
             data.items[type].push(item);
             return item;
-        },
-        seeData: function(){
-            return data;
         }
     }
 })();
 // Програмын холбогч контроллер
 var appController = (function(uiController, financeController) {
     let ctrlAddItem = function() {
-        // Оруулах өгөгдлийг дэлгэцнээё олж авна
+        // Оруулах өгөгдлийг дэлгэцнээс олж авна
         let input = uiController.getInput();
         if(input.description !== '' && input.value !== ''){
             // Олж авсан өгөгдлүүдээ санхүүгийн контроллерт дамжуулна
-            let item = financeController.addItem(input.type, input.description, input.value);
+            let item = financeController.addItem(input.type, input.description, parseInt(input.value));
             // Олж авсан өгөгдлүүдээ тохирох хэсэгт нь гаргана
             uiController.addListItem(item, input.type);
             uiController.clearFields();
-            // Төсвийг тооцоолно
-            financeController.tusuvTuluv();
-            // Эцсийн үлдэгдэл
-            let oldData = financeController.tusuvEnd();
-            //тооцоог дэлгэцэнд гаргана
-            uiController.dataLooked(oldData);
+            // төсөвийг шинээр тооцоолоод дэлгэцэнд үзүүлэх
+            updateTusuv();
         }
     };
-
+    let updateTusuv = function() {
+        // Төсвийг тооцоолно
+        financeController.tusuvTuluv();
+        // Эцсийн үлдэгдэл
+        let oldData = financeController.tusuvEnd();
+        //тооцоог дэлгэцэнд гаргана
+        uiController.dataLooked(oldData);
+        // Элементүүдийн хувийг тооцоолно
+        financeController.calculatePercentage();
+        // элементүүдийн хувийг хүлээж авна
+        let allPercentages = financeController.getPercentage();
+        // эдгээр хувийг дэлгэцэнд гаргана
+        console.log(allPercentages);
+    };
     let setupEventListeners = function(){
         let DOM = uiController.getDOMstrings();
         document.querySelector(DOM.addBtn).addEventListener('click', function(){
@@ -161,6 +195,21 @@ var appController = (function(uiController, financeController) {
         document.addEventListener('keypress', function(e){
             if(e.key === 13 || e.which === 13){
                 ctrlAddItem();
+            }
+        });
+        document.querySelector(DOM.containerDiv).addEventListener('click', function(e){
+            let id = e.target.parentNode.parentNode.parentNode.parentNode.id;
+            if(id){
+                let arr = id.split('-');
+                let type = arr[0];
+                let itemId = parseInt(arr[1]);
+                // console.log(type + ' : ' + itemId);
+                // санхүүгийн модулиас type, id ашиглаад устгана
+                financeController.deleteItem(type, itemId);
+                // дэлгэц дээрээс энэ элементийг устгана
+                uiController.deleteListItem(id);
+                // үлдэгдэл тооцоог шинэчилж харуулна
+                updateTusuv();
             }
         });
     };

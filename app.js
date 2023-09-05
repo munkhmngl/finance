@@ -40,6 +40,13 @@ var uiController = (function() {
             var date = new Date();
             document.querySelector(DOMstrings.dateLabel).textContent = date.getFullYear() + ' оны ' + date.getMonth() + ' сарын ӨРХИЙН санхүү';
         },
+        changeType: function() {
+            var fields = document.querySelectorAll(DOMstrings.inputType + ', ' + DOMstrings.inputDescription + ', ' + DOMstrings.inputValue);
+            document.querySelector(DOMstrings.addBtn).classList.toggle('red');
+            nodelistForeach(fields, function(el){
+                el.classList.toggle('red-focus');
+            });
+        },
         getInput: function() {
             return {
                 type: document.querySelector(DOMstrings.inputType).value, // exp, inc
@@ -70,9 +77,13 @@ var uiController = (function() {
         tusviigUzuuleh: function(tusuv) {
             let type;
             if(tusuv.tusuv >= 0) type = 'inc';
-            document.querySelector(DOMstrings.tusuvLabel).textContent = formatMoney(tusuv.tusuv, type);
-            document.querySelector(DOMstrings.incomeLabel).textContent = '+ ' + tusuv.totalInc;
-            document.querySelector(DOMstrings.expeseLabel).textContent = '- ' + tusuv.totalExp;
+            if(tusuv.tusuv > 0){
+                document.querySelector(DOMstrings.tusuvLabel).textContent = formatMoney(tusuv.tusuv, type);
+            } else {
+                document.querySelector(DOMstrings.tusuvLabel).textContent = tusuv.tusuv, type;
+            }
+            document.querySelector(DOMstrings.incomeLabel).textContent = formatMoney(tusuv.totalInc, 'inc');
+            document.querySelector(DOMstrings.expeseLabel).textContent = formatMoney(tusuv.totalExp, 'exp');
             if (tusuv.huvi !== 0) {
                 document.querySelector(DOMstrings.percentageLabel).textContent = tusuv.huvi + "%";
             } else {
@@ -239,6 +250,7 @@ var appController = (function(uiController, financeController) {
             ctrlAddItem();
         }
     });
+    document.querySelector(DOM.inputType).addEventListener('change', uiController.changeType);
     document.querySelector(DOM.containerDiv).addEventListener("click", function(event) {
         var id = event.target.parentNode.parentNode.parentNode.parentNode.id;
         if (id) {
